@@ -3,6 +3,7 @@ import Background from './components/Background';
 import CustomCursor from './components/CustomCursor';
 import AuthScreen from './components/AuthScreen';
 import PixelRain from './components/PixelRain';
+import MessengerUI from './components/MessengerUI';
 import { AnimatePresence, motion } from 'framer-motion';
 import { auth, profiles } from './lib/supabase';
 
@@ -134,43 +135,7 @@ function App() {
         )}
 
         {user && profile && !showWelcome && (
-          <motion.div
-            key="app"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              textAlign: 'center',
-              zIndex: 20
-            }}
-          >
-            <h1 className="neon-text-cyan" style={{ fontSize: '4rem', marginBottom: '2rem' }}>
-              {profile.username}
-            </h1>
-            <p style={{ fontSize: '1.5rem', color: '#aaa', marginBottom: '3rem' }}>
-              Welcome to 1L Gram!<br />
-              Building full messenger UI...
-            </p>
-            <button
-              onClick={() => auth.signOut()}
-              className="clickable"
-              style={{
-                padding: '1rem 2rem',
-                background: 'linear-gradient(135deg, #ff00ff, #ff0066)',
-                border: 'none',
-                color: '#fff',
-                fontSize: '1.2rem',
-                borderRadius: '12px',
-                fontWeight: 'bold',
-                letterSpacing: '2px'
-              }}
-            >
-              SIGN OUT
-            </button>
-          </motion.div>
+          <MessengerUI key="messenger" user={user} profile={profile} onSignOut={() => auth.signOut()} />
         )}
       </AnimatePresence>
     </>
