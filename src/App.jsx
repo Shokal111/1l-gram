@@ -1,24 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Background from './components/Background';
 import CustomCursor from './components/CustomCursor';
-import LoginScreen from './components/LoginScreen';
-import ChatInterface from './components/ChatInterface';
+import AuthScreen from './components/AuthScreen';
 import PixelRain from './components/PixelRain';
 import { AnimatePresence, motion } from 'framer-motion';
+import { auth, profiles } from './lib/supabase';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [username, setUsername] = useState('');
 
-  const handleLogin = (name) => {
-    setUsername(name);
+  useEffect(() => {
+    // Check current session
+    auth.getCurrentUser().then(currentUser => {
+      if (currentUser) {
+        setUser(currentUser);
+        loadProfile(currentUser.id);
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: authListener } = auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        await loadProfile(session.user.id);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  const loadProfile = async (userId) => {
+    try {
+      const userProfile = await profiles.getProfile(userId);
+      setProfile(userProfile);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
+
+  const handleLogin = async (userData) => {
     setShowWelcome(true);
     setTimeout(() => {
       setShowWelcome(false);
-      setIsLoggedIn(true);
     }, 3500);
   };
+
+  if (loading) {
+    return (
+      <>
+        <Background />
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#00f3ff',
+          fontSize: '2rem',
+          fontFamily: 'Orbitron'
+        }}>
+          LOADING...
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -29,11 +82,11 @@ function App() {
       <div className="scanline"></div>
 
       <AnimatePresence mode="wait">
-        {!isLoggedIn && !showWelcome && (
-          <LoginScreen key="login" onLogin={handleLogin} />
+        {!user && !showWelcome && (
+          <AuthScreen key="auth" onLogin={handleLogin} />
         )}
 
-        {showWelcome && (
+        {showWelcome && profile && (
           <motion.div
             key="welcome"
             initial={{ opacity: 0, scale: 0.8 }}
@@ -65,7 +118,7 @@ function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
-              {username}
+              {profile.username}
             </motion.h2>
             <motion.div
               style={{ marginTop: '2rem', width: '200px', height: '4px', background: '#333' }}
@@ -80,8 +133,44 @@ function App() {
           </motion.div>
         )}
 
-        {isLoggedIn && (
-          <ChatInterface key="chat" username={username} />
+        {user && profile && !showWelcome && (
+          <motion.div
+            key="app"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              zIndex: 20
+            }}
+          >
+            <h1 className="neon-text-cyan" style={{ fontSize: '4rem', marginBottom: '2rem' }}>
+              {profile.username}
+            </h1>
+            <p style={{ fontSize: '1.5rem', color: '#aaa', marginBottom: '3rem' }}>
+              Welcome to 1L Gram!<br />
+              Building full messenger UI...
+            </p>
+            <button
+              onClick={() => auth.signOut()}
+              className="clickable"
+              style={{
+                padding: '1rem 2rem',
+                background: 'linear-gradient(135deg, #ff00ff, #ff0066)',
+                border: 'none',
+                color: '#fff',
+                fontSize: '1.2rem',
+                borderRadius: '12px',
+                fontWeight: 'bold',
+                letterSpacing: '2px'
+              }}
+            >
+              SIGN OUT
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
